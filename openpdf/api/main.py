@@ -16,6 +16,9 @@ from openpdf.core.pdf_ops import (
 )
 from openpdf.ocr.chandra import get_ocr_adapter
 
+import logging
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0",
               description="Local-first PDF tools with Chandra OCR 2.")
@@ -36,9 +39,14 @@ async def _read_pdf(file: UploadFile) -> tuple[str, bytes]:
     name = file.filename or "document.pdf"
     if not name.lower().endswith(".pdf"):
         raise HTTPException(status_code=415, detail="Please upload a .pdf file.")
-    data = await file.read()
-    if len(data) > settings.max_pdf_mb * 1024 * 1024:
-        raise HTTPException(status_code=413, detail=f"PDF exceeds {settings.max_pdf_mb} MB limit.")
+    max_bytes = settings.max_pdf_mb * 1024 * 1024
+    data = await file.read(max_bytes + 1)
+
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"PDF exceeds {settings.max_pdf_mb} MB limit.",
+        )
     try:
         validate_pdf(data, max_pages=settings.max_pages)
     except Exception as exc:
@@ -118,7 +126,15 @@ async def ocr_export(file: UploadFile = File(...)):
             )
             results.append(normalize_page_result(page_number, markdown_text, settings.ocr_backend))
         bundle = export_bundle(results, source_name=name)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"OCR failed: {exc}") from exc
+    
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("OCR export failed")
+        raise HTTPException(
+            status_code=500,
+            detail="OCR processing failed. Please try again.",
+        ) from None
+    
     return Response(bundle, media_type="application/zip",
                     headers={"Content-Disposition": 'attachment; filename="ocr-results.zip"'})

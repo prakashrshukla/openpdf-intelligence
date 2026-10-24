@@ -63,20 +63,73 @@ streamlit run app\streamlit_app.py
 
 Open Streamlit at `http://localhost:8501` and API docs at `http://127.0.0.1:8000/docs`.
 
+
 ## Configure OCR
 
-Edit `.env`:
+Edit `.env` to choose the inference backend and model source. These are separate settings:
+
+- `OPENPDF_OCR_BACKEND`: selects how inference runs (`hf` for Hugging Face Transformers or `vllm` for a separately running vLLM server).
+- `OPENPDF_MODEL_SOURCE`: selects where the model is identified (`local` for a local directory or `huggingface` for a Hugging Face repository ID). This setting applies to the `hf` backend; when using `vllm`, the server manages model loading.
+
+### Option A: Use a local model
+
+Use this option when model files are already present on your machine and you do not want the application to download them.
 
 ```dotenv
 OPENPDF_OCR_BACKEND=hf
+OPENPDF_MODEL_SOURCE=local
+OPENPDF_MODEL_ID=D:\ai_models\chandra-ocr-2
+```
+
+The directory must exist and contain `config.json`. The application validates the directory before initializing Chandra. It does not bundle model weights.
+
+### Option B: Use a Hugging Face repository
+
+Use a repository ID when you want Hugging Face to resolve and download the model files as needed.
+
+```dotenv
+OPENPDF_OCR_BACKEND=hf
+OPENPDF_MODEL_SOURCE=huggingface
 OPENPDF_MODEL_ID=datalab-to/chandra-ocr-2
+```
+
+The first OCR request may download model files if they are not already cached. Check the model card, license, hardware requirements, and available disk space before running inference.
+
+### Optional: Configure the Hugging Face cache
+
+To use a custom Hugging Face Hub cache directory, set:
+
+```dotenv
+OPENPDF_HF_CACHE_DIR=D:\hf-cache
+```
+
+Leave this variable unset to use the Hugging Face library's default cache location. Restart the application after changing model-source or cache settings.
+
+### Option C: Use a vLLM server
+
+For a separately running compatible vLLM/Chandra server, configure:
+
+```dotenv
+OPENPDF_OCR_BACKEND=vllm
 OPENPDF_VLLM_API_BASE=http://127.0.0.1:8001/v1
 OPENPDF_VLLM_MODEL_NAME=datalab-to/chandra-ocr-2
+```
+
+The server manages model loading. Configure the model name to match the model served by your endpoint, and verify that the server is running before submitting OCR requests.
+
+### Other settings
+
+```dotenv
 OPENPDF_MAX_PDF_MB=100
+OPENPDF_MAX_PAGES=250
 OPENPDF_RENDER_DPI=144
 ```
 
-For vLLM, set `OPENPDF_OCR_BACKEND=vllm` and configure the API base/model name for your server. Start and test the server independently before OCR requests. The adapter uses Chandra's documented `InferenceManager` interface for both methods.
+These control the maximum PDF upload size, maximum page count, and page-rendering DPI, respectively.
+
+### Future provider support
+
+Ollama is not currently implemented as an OCR backend in this project. Supporting it would require a separate adapter and a compatible vision model; do not set `OPENPDF_OCR_BACKEND=ollama` with the current implementation.
 
 ## API examples
 

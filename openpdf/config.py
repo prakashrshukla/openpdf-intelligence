@@ -19,7 +19,9 @@ class Settings(BaseSettings):
     app_name: str = "OpenPDF Intelligence"
     api_url: str = "http://127.0.0.1:8000"
     ocr_backend: Literal["hf", "vllm"] = "hf"
+    model_source: Literal["local", "huggingface"] = "huggingface"
     model_id: str = "datalab-to/chandra-ocr-2"
+    hf_cache_dir: Path | None = None
     vllm_api_base: str = "http://127.0.0.1:8001/v1"
     vllm_model_name: str = "datalab-to/chandra-ocr-2"
     max_pdf_mb: int = Field(default=100, ge=1, le=1024)
