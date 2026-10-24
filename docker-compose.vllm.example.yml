@@ -1,0 +1,21 @@
+# Example only: GPU runtime, image tag, and model compatibility depend on your host.
+# Review the upstream Chandra/vLLM instructions before using in production.
+services:
+  chandra-vllm:
+    image: vllm/vllm-openai:latest
+    command:
+      - --model
+      - datalab-to/chandra-ocr-2
+      - --served-model-name
+      - datalab-to/chandra-ocr-2
+      - --trust-remote-code
+    ports:
+      - "127.0.0.1:8001:8000"
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
